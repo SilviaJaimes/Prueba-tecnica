@@ -16,7 +16,7 @@ Este proyecto consiste en una API RESTful desarrollada en **.NET 7** usando **Da
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/SilviaJaimes/PruebaTecnica.git
+git clone https://github.com/SilviaJaimes/Prueba-tecnica.git
 cd tienda-app/backend
 ```
 
@@ -130,106 +130,127 @@ Finalmente podrás probar todos los endpoints.
 
 ### 📂 Categorías
 
-*ruta:* `http://localhost:5067/api/categories`
+*ruta:* `http://localhost:5067/api/categories`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/categories/{id}`
+*ruta:* `http://localhost:5067/api/categories/{id}`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/categories`
-*body:* ```{
+*ruta:* `http://localhost:5067/api/categories`  
+*body:* 
+```
+{  
   "name": "Tecnología"
-}```
+}
+```
 *método:* POST
 
-*ruta:* `http://localhost:5067/api/categories/{id}`
-*body:* ```{
-  "name": "Gastronomía"
-}```
+*ruta:* `http://localhost:5067/api/categories/{id}`  
+*body:* 
+```
+{  
+  "name": "Gastronomía"  
+}
+```  
 *método:* PUT
 
-*ruta:* `http://localhost:5067/api/categories/{id}`
+*ruta:* `http://localhost:5067/api/categories/{id}`  
 *método:* DELETE
 
 
 ### 🚚 Proveedores
-*ruta:* `http://localhost:5067/api/suppliers`
+*ruta:* `http://localhost:5067/api/suppliers`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/suppliers/{id}`
+*ruta:* `http://localhost:5067/api/suppliers/{id}`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/suppliers`
-*body:* ```{
+*ruta:* `http://localhost:5067/api/suppliers`  
+*body:* 
+```
+{
   "name": "Proveedor S.A.",
   "contact": "proveedor@correo.com"
-}```
+}
+```
 *método:* POST
 
 *ruta:* `http://localhost:5067/api/suppliers/{id}`
-*body:* ```{
+*body:* 
+```
+{
   "name": "Distribuidora Global",
   "contact": "contacto@global.com"
-}```
+}
+```  
 *método:* PUT
 
-*ruta:* `http://localhost:5067/api/suppliers/{id}`
+*ruta:* `http://localhost:5067/api/suppliers/{id}`  
 *método:* DELETE
 
 ### 🛍️ Productos
-*ruta:* `http://localhost:5067/api/products`
+*ruta:* `http://localhost:5067/api/products`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/products/{id}`
+*ruta:* `http://localhost:5067/api/products/{id}`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/products`
-*body:* ```{
+*ruta:* `http://localhost:5067/api/products`  
+*body:* 
+```
+{
   "name": "Laptop Lenovo",
   "description": "i7, 16GB RAM, 512 SSD",
   "price": 4500.00,
   "categoryId": 1,
   "supplierId": 1
-}```
+}
+```  
 *método:* POST
 
-*ruta:* `http://localhost:5067/api/products/{id}`
-*body:* ```{
+*ruta:* `http://localhost:5067/api/products/{id}`  
+*body:* 
+```
+{
   "name": "Smartphone Samsung",
   "description": "Galaxy S22, 128GB",
   "price": 3500.00,
   "categoryId": 1,
   "supplierId": 2
-}```
+}
+```  
 *método:* PUT
 
-*ruta:* `http://localhost:5067/api/products/{id}`
+*ruta:* `http://localhost:5067/api/products/{id}`  
 *método:* DELETE
 
 ### 📦 Órdenes
-*ruta:* `http://localhost:5067/api/orders`
+*ruta:* `http://localhost:5067/api/orders`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/orders/{id}`
+*ruta:* `http://localhost:5067/api/orders/{id}`  
 *método:* GET
 
-*ruta:* `http://localhost:5067/api/orders`
-*body:* ```{
+*ruta:* `http://localhost:5067/api/orders`  
+*body:* 
+```
+{
   "productId": 1,
   "quantity": 3,
   "totalPrice": 13500.00
-}```
+}
+```  
 *método:* POST
 
-*ruta:* `http://localhost:5067/api/orders/{id}`
+*ruta:* `http://localhost:5067/api/orders/{id}`  
 *body:* ```{
   "productId": 3,
   "quantity": 5,
   "totalPrice": 17500.00
-}```
+}```  
 *método:* PUT
 
-*ruta:* `http://localhost:5067/api/orders/{id}`
+*ruta:* `http://localhost:5067/api/orders/{id}`  
 *método:* DELETE
 
 ## 🧑‍💻 Frontend - Next.js + TypeScript
