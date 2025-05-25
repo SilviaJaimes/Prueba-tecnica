@@ -260,14 +260,15 @@ Finalmente podrás probar todos los endpoints.
 ### 1. Instalar dependencias
 
 ```bash
-cd frontend
-yarn install
+cd ..
+cd Frontend
+npm i
 ```
 
 ### 2. Ejecutar en modo desarrollo
 
 ```bash
-yarn dev
+npm run dev
 ```
 
 Esto abrirá la app en: [http://localhost:3000](http://localhost:3000)
