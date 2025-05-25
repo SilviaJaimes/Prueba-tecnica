@@ -17,7 +17,7 @@ Este proyecto consiste en una API RESTful desarrollada en **.NET 7** usando **Da
 
 ```bash
 git clone https://github.com/SilviaJaimes/Prueba-tecnica.git
-cd tienda-app/backend
+cd Prueba-tecnica/JwtAuthApi
 ```
 
 ### 2. Crear la base de datos y las tablas
