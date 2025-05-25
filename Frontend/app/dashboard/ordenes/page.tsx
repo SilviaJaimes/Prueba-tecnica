@@ -17,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
-// Datos de ejemplo
 const initialOrdenes = [
   {
     id: 1,
@@ -56,7 +55,6 @@ const initialOrdenes = [
   },
 ]
 
-// Productos disponibles
 const productos = [
   { id: 1, nombre: "Laptop HP Pavilion", precio: 899.99 },
   { id: 2, nombre: 'Monitor Dell 27"', precio: 299.99 },
@@ -117,7 +115,7 @@ export default function OrdenesPage() {
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (orden: any) => {
+  const handleEdit = (orden) => {
     setCurrentOrden({ ...orden })
     setSelectedProducto("")
     setCantidad(1)
@@ -125,12 +123,12 @@ export default function OrdenesPage() {
     setIsEditOpen(true)
   }
 
-  const handleDelete = (orden: any) => {
+  const handleDelete = (orden) => {
     setCurrentOrden(orden)
     setIsDeleteOpen(true)
   }
 
-  const handleView = (orden: any) => {
+  const handleView = (orden) => {
     setCurrentOrden(orden)
     setIsViewOpen(true)
   }
@@ -143,14 +141,12 @@ export default function OrdenesPage() {
       const updatedProductos = [...currentOrden.productos]
 
       if (existingProductIndex >= 0) {
-        // Actualizar producto existente
         updatedProductos[existingProductIndex] = {
           ...updatedProductos[existingProductIndex],
           cantidad: updatedProductos[existingProductIndex].cantidad + cantidad,
           subtotal: updatedProductos[existingProductIndex].subtotal + subtotal,
         }
       } else {
-        // Agregar nuevo producto
         updatedProductos.push({
           id: Number.parseInt(selectedProducto),
           nombre: productoActual.nombre,
@@ -175,7 +171,7 @@ export default function OrdenesPage() {
     }
   }
 
-  const removeProductFromOrden = (productId: any) => {
+  const removeProductFromOrden = (productId) => {
     const updatedProductos = currentOrden.productos.filter((p) => p.id !== productId)
     const total = updatedProductos.reduce((sum, p) => sum + p.subtotal, 0)
 
@@ -301,7 +297,6 @@ export default function OrdenesPage() {
         </CardContent>
       </Card>
 
-      {/* Modal de Ver Orden */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -366,7 +361,6 @@ export default function OrdenesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Crear Orden */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -538,7 +532,6 @@ export default function OrdenesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Editar Orden */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

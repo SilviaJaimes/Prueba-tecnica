@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pencil, Plus, Search, Trash2 } from "lucide-react"
 
-// Datos de ejemplo
 const initialProducts = [
   { id: 1, nombre: "Laptop HP Pavilion", precio: 899.99, stock: 15, categoria: "Electrónicos", proveedor: "HP Inc." },
   {
@@ -84,12 +83,12 @@ export default function ProductosPage() {
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product) => {
     setCurrentProduct(product)
     setIsEditOpen(true)
   }
 
-  const handleDelete = (product: any) => {
+  const handleDelete = (product) => {
     setCurrentProduct(product)
     setIsDeleteOpen(true)
   }
@@ -178,7 +177,6 @@ export default function ProductosPage() {
         </CardContent>
       </Card>
 
-      {/* Modal de Crear Producto */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -260,7 +258,6 @@ export default function ProductosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Editar Producto */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -342,7 +339,6 @@ export default function ProductosPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Eliminar Producto */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>

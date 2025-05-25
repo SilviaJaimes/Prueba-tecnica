@@ -109,19 +109,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
+                  <Button variant="ghost" className="flex items-center gap-2 cursor-pointer">
                     <User className="h-5 w-5" />
                     <span>Admin</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Perfil</DropdownMenuItem>
-                  <DropdownMenuItem>Configuración</DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <Link href="/login">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
                       <LogOut className="h-4 w-4 mr-2" />
                       <span>Cerrar sesión</span>
                     </DropdownMenuItem>

@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Registrar Endpoint API Explorer para Swagger
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -69,6 +68,17 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment() || true)
@@ -81,7 +91,7 @@ if (app.Environment.IsDevelopment() || true)
 }
 
 app.UseHttpsRedirection();
-
+app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 

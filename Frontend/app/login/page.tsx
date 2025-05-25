@@ -14,25 +14,36 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Solo visual, redirigir al dashboard
-    router.push("/dashboard")
+
+    try {
+      const response = await fetch("http://localhost:5067/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        localStorage.setItem("token", data.token)
+        router.push("/dashboard")
+      } else {
+        const errorData = await response.json()
+        alert(errorData.message || "Error al iniciar sesión")
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      alert("Error de conexión con el servidor")
+    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="w-20 h-20 mb-2 bg-slate-800 rounded-full flex items-center justify-center">
-            <Image
-              src="/placeholder.svg?height=80&width=80"
-              width={80}
-              height={80}
-              alt="Logo"
-              className="rounded-full"
-            />
-          </div>
           <CardTitle className="text-2xl font-bold text-center">Sistema de Gestión</CardTitle>
           <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema</CardDescription>
         </CardHeader>
@@ -40,7 +51,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
-                Correo Electrónico
+                Correo electrónico
               </label>
               <Input
                 id="email"
@@ -56,9 +67,6 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-sm font-medium">
                   Contraseña
                 </label>
-                <button type="button" className="text-sm text-slate-500 hover:text-slate-700">
-                  ¿Olvidaste tu contraseña?
-                </button>
               </div>
               <Input
                 id="password"
@@ -69,14 +77,11 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full cursor-pointer">
               Ingresar
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-slate-500">© 2024 Sistema de Gestión. Todos los derechos reservados.</p>
-        </CardFooter>
       </Card>
     </div>
   )

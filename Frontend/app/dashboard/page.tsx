@@ -13,7 +13,7 @@ export default function Dashboard() {
     },
     {
       title: "Categorías",
-      description: "Administra las categorías de productos",
+      description: "Administra las categorías",
       icon: <Tag className="h-8 w-8" />,
       href: "/dashboard/categorias",
       color: "bg-green-50 text-green-600",
@@ -27,7 +27,7 @@ export default function Dashboard() {
     },
     {
       title: "Órdenes",
-      description: "Administra órdenes de compra y venta",
+      description: "Administra órdenes",
       icon: <ShoppingCart className="h-8 w-8" />,
       href: "/dashboard/ordenes",
       color: "bg-amber-50 text-amber-600",

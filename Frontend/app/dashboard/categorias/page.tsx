@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,68 +13,134 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import { Pencil, Plus, Search, Trash2, Loader2 } from "lucide-react"
+import { categoriesService } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
-// Datos de ejemplo
-const initialCategorias = [
-  { id: 1, nombre: "Electrónicos", descripcion: "Dispositivos electrónicos como laptops, tablets y smartphones" },
-  { id: 2, nombre: "Periféricos", descripcion: "Accesorios para computadoras como teclados, ratones y monitores" },
-  { id: 3, nombre: "Almacenamiento", descripcion: "Dispositivos de almacenamiento como discos duros y memorias USB" },
-  { id: 4, nombre: "Redes", descripcion: "Equipos de redes como routers, switches y cables" },
-  { id: 5, nombre: "Software", descripcion: "Programas y aplicaciones informáticas" },
-]
+interface Categoria {
+  id: number
+  name: string
+}
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState(initialCategorias)
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [currentCategoria, setCurrentCategoria] = useState({
+  const [currentCategoria, setCurrentCategoria] = useState<Categoria>({
     id: 0,
-    nombre: "",
-    descripcion: "",
+    name: "",
   })
+  const [saving, setSaving] = useState(false)
+  const { toast } = useToast()
 
-  const filteredCategorias = categorias.filter(
-    (categoria) =>
-      categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      categoria.descripcion.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredCategorias = categorias.filter((categoria) =>
+    categoria.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  useEffect(() => {
+    loadCategorias()
+  }, [])
+
+  const loadCategorias = async () => {
+    try {
+      setLoading(true)
+      const data = await categoriesService.getAll()
+      setCategorias(data)
+    } catch (error) {
+      console.error("Error loading categories:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las categorías",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleCreate = () => {
     setCurrentCategoria({
-      id: categorias.length + 1,
-      nombre: "",
-      descripcion: "",
+      id: 0,
+      name: "",
     })
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (categoria: any) => {
+  const handleEdit = (categoria: Categoria) => {
     setCurrentCategoria(categoria)
     setIsEditOpen(true)
   }
 
-  const handleDelete = (categoria: any) => {
+  const handleDelete = (categoria: Categoria) => {
     setCurrentCategoria(categoria)
     setIsDeleteOpen(true)
   }
 
-  const saveCategoria = () => {
-    if (isCreateOpen) {
-      setCategorias([...categorias, currentCategoria])
-      setIsCreateOpen(false)
-    } else if (isEditOpen) {
-      setCategorias(categorias.map((c) => (c.id === currentCategoria.id ? currentCategoria : c)))
-      setIsEditOpen(false)
+  const saveCategoria = async () => {
+    try {
+      setSaving(true)
+
+      if (isCreateOpen) {
+        await categoriesService.create({ name: currentCategoria.name })
+        toast({
+          title: "Éxito",
+          description: "Categoría creada correctamente",
+        })
+        setIsCreateOpen(false)
+      } else if (isEditOpen) {
+        await categoriesService.update(currentCategoria.id, { name: currentCategoria.name })
+        toast({
+          title: "Éxito",
+          description: "Categoría actualizada correctamente",
+        })
+        setIsEditOpen(false)
+      }
+
+      await loadCategorias()
+    } catch (error) {
+      console.error("Error saving category:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la categoría",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const confirmDelete = () => {
-    setCategorias(categorias.filter((c) => c.id !== currentCategoria.id))
-    setIsDeleteOpen(false)
+  const confirmDelete = async () => {
+    try {
+      setSaving(true)
+      await categoriesService.delete(currentCategoria.id)
+      toast({
+        title: "Éxito",
+        description: "Categoría eliminada correctamente",
+      })
+      setIsDeleteOpen(false)
+      await loadCategorias()
+    } catch (error) {
+      console.error("Error deleting category:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la categoría",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Cargando categorías...</span>
+      </div>
+    )
   }
 
   return (
@@ -113,7 +179,6 @@ export default function CategoriasPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Descripción</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -121,8 +186,7 @@ export default function CategoriasPage() {
               {filteredCategorias.map((categoria) => (
                 <TableRow key={categoria.id}>
                   <TableCell>{categoria.id}</TableCell>
-                  <TableCell className="font-medium">{categoria.nombre}</TableCell>
-                  <TableCell>{categoria.descripcion}</TableCell>
+                  <TableCell className="font-medium">{categoria.name}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(categoria)}>
@@ -140,7 +204,6 @@ export default function CategoriasPage() {
         </CardContent>
       </Card>
 
-      {/* Modal de Crear Categoría */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -152,30 +215,23 @@ export default function CategoriasPage() {
               <label htmlFor="nombre">Nombre de la Categoría</label>
               <Input
                 id="nombre"
-                value={currentCategoria.nombre}
-                onChange={(e) => setCurrentCategoria({ ...currentCategoria, nombre: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="descripcion">Descripción</label>
-              <Textarea
-                id="descripcion"
-                value={currentCategoria.descripcion}
-                onChange={(e) => setCurrentCategoria({ ...currentCategoria, descripcion: e.target.value })}
-                rows={3}
+                value={currentCategoria.name}
+                onChange={(e) => setCurrentCategoria({ ...currentCategoria, name: e.target.value })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={saveCategoria}>Guardar</Button>
+            <Button onClick={saveCategoria} disabled={saving || !currentCategoria.name.trim()}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Guardar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Editar Categoría */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -187,25 +243,19 @@ export default function CategoriasPage() {
               <label htmlFor="nombre">Nombre de la Categoría</label>
               <Input
                 id="nombre"
-                value={currentCategoria.nombre}
-                onChange={(e) => setCurrentCategoria({ ...currentCategoria, nombre: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <label htmlFor="descripcion">Descripción</label>
-              <Textarea
-                id="descripcion"
-                value={currentCategoria.descripcion}
-                onChange={(e) => setCurrentCategoria({ ...currentCategoria, descripcion: e.target.value })}
-                rows={3}
+                value={currentCategoria.name}
+                onChange={(e) => setCurrentCategoria({ ...currentCategoria, name: e.target.value })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={saveCategoria}>Guardar Cambios</Button>
+            <Button onClick={saveCategoria} disabled={saving || !currentCategoria.name.trim()}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Guardar Cambios
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -220,14 +270,15 @@ export default function CategoriasPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="font-medium">{currentCategoria.nombre}</p>
+            <p className="font-medium">{currentCategoria.name}</p>
             <p className="text-slate-500">ID: {currentCategoria.id}</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button variant="destructive" onClick={confirmDelete} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Eliminar
             </Button>
           </DialogFooter>
