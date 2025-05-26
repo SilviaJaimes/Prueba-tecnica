@@ -23,7 +23,7 @@ public class ProductRepository : IProductRepository
 
     public async Task<int> CreateAsync(Product product)
     {
-        const string sql = @"INSERT INTO products (name, price, description, category_id, supplier_id)
+        const string sql = @"INSERT INTO products (name, price, description, categoryId, supplier_id)
                              VALUES (@Name, @Price, @Description, @CategoryId, @SupplierId) RETURNING id";
         using var conn = new NpgsqlConnection(_config.GetConnectionString("DefaultConnection"));
         return await conn.ExecuteScalarAsync<int>(sql, product);
@@ -32,7 +32,7 @@ public class ProductRepository : IProductRepository
     public async Task<bool> UpdateAsync(Product product)
     {
         const string sql = @"UPDATE products SET name=@Name, price=@Price, description=@Description,
-                            category_id=@CategoryId, supplier_id=@SupplierId WHERE id=@Id";
+                            categoryId=@CategoryId, supplier_id=@SupplierId WHERE id=@Id";
         using var conn = new NpgsqlConnection(_config.GetConnectionString("DefaultConnection"));
         return await conn.ExecuteAsync(sql, product) > 0;
     }
