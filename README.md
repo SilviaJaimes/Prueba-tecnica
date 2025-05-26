@@ -25,37 +25,30 @@ cd Prueba-tecnica/JwtAuthApi
 Conéctate a tu servidor de PostgreSQL y ejecuta el siguiente script SQL (puedes usar PgAdmin, DBeaver o `psql` en consola):
 
 ```sql
--- Crear base de datos (solo si no existe)
 CREATE DATABASE tienda_db;
 
--- Conectarse a la base de datos
 \c tienda_db;
 
--- Tabla de usuarios
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
 
--- Usuario de prueba
 INSERT INTO users (email, password)
 VALUES ('admin@tienda.com', '1234');
 
--- Tabla de categorías
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL
 );
 
--- Tabla de proveedores
 CREATE TABLE suppliers (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     contact TEXT
 );
 
--- Tabla de productos
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -65,7 +58,6 @@ CREATE TABLE products (
     supplierId INT REFERENCES suppliers(id)
 );
 
--- Tabla de órdenes
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     productId INT REFERENCES products(id),
@@ -73,6 +65,26 @@ CREATE TABLE orders (
     totalPrice DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO categories (name) VALUES 
+('Electrónica'),
+('Ropa'),
+('Hogar');
+
+INSERT INTO suppliers (name, contact) VALUES 
+('Proveedor Uno', 'contacto1@proveedor.com'),
+('Proveedor Dos', 'contacto2@proveedor.com'),
+('Proveedor Tres', 'contacto3@proveedor.com');
+
+INSERT INTO products (name, description, price, categoryId, supplierId) VALUES 
+('Smartphone', 'Teléfono inteligente de última generación', 799.99, 1, 1),
+('Camiseta', 'Camiseta de algodón 100%', 19.99, 2, 2),
+('Lámpara LED', 'Lámpara de escritorio con luz regulable', 29.99, 3, 3);
+
+INSERT INTO orders (productId, quantity, totalPrice) VALUES 
+(1, 2, 1599.98),
+(2, 5, 99.95),
+(3, 3, 89.97);
 ```
 
 ### 3. Configurar conexión a PostgreSQL
