@@ -61,16 +61,16 @@ CREATE TABLE products (
     name TEXT NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
-    category_id INT REFERENCES categories(id),
-    supplier_id INT REFERENCES suppliers(id)
+    categoryId INT REFERENCES categories(id),
+    supplierId INT REFERENCES suppliers(id)
 );
 
 -- Tabla de órdenes
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
-    product_id INT REFERENCES products(id),
+    productId INT REFERENCES products(id),
     quantity INT NOT NULL,
-    total_price DECIMAL(10,2) NOT NULL,
+    totalPrice DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
