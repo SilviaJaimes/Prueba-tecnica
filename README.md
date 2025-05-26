@@ -243,11 +243,14 @@ Finalmente podrás probar todos los endpoints.
 *método:* POST
 
 *ruta:* `http://localhost:5067/api/orders/{id}`  
-*body:* ```{
+*body:* 
+```
+{
   "productId": 3,
   "quantity": 5,
   "totalPrice": 17500.00
-}```  
+}
+```  
 *método:* PUT
 
 *ruta:* `http://localhost:5067/api/orders/{id}`  
