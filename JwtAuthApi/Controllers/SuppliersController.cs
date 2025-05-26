@@ -31,10 +31,19 @@ public class SuppliersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Supplier model)
+    public async Task<IActionResult> Update(int id, [FromBody] Supplier body)
     {
-        if (id != model.Id) return BadRequest();
-        var updated = await _repo.UpdateAsync(model);
+        if (string.IsNullOrWhiteSpace(body.Name))
+            return BadRequest("El campo 'name' es obligatorio.");
+
+        var supplier = new Supplier
+        {
+            Id = id,
+            Name = body.Name,
+            Contact = body.Contact
+        };
+
+        var updated = await _repo.UpdateAsync(supplier);
         return updated ? NoContent() : NotFound();
     }
 

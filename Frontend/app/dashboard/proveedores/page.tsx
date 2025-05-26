@@ -17,20 +17,20 @@ import { Pencil, Plus, Search, Trash2, Loader2 } from "lucide-react"
 import { suppliersService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-interface Proveedor {
+interface Supplier {
   id: number
   name: string
   contact: string
 }
 
 export default function ProveedoresPage() {
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [proveedores, setProveedores] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [currentProveedor, setCurrentProveedor] = useState<Proveedor>({
+  const [currentProveedor, setCurrentProveedor] = useState<Supplier>({
     id: 0,
     name: "",
     contact: "",
@@ -74,35 +74,43 @@ export default function ProveedoresPage() {
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (proveedor: Proveedor) => {
-    setCurrentProveedor(proveedor)
+  const handleEdit = (proveedor: Supplier) => {
+    setCurrentProveedor({ ...proveedor })
     setIsEditOpen(true)
   }
 
-  const handleDelete = (proveedor: Proveedor) => {
+  const handleDelete = (proveedor: Supplier) => {
     setCurrentProveedor(proveedor)
     setIsDeleteOpen(true)
   }
 
   const saveProveedor = async () => {
+    if (!currentProveedor.name.trim() || !currentProveedor.contact.trim()) {
+      toast({
+        title: "Error",
+        description: "Todos los campos son requeridos",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       setSaving(true)
 
+      const supplierData = {
+        name: currentProveedor.name.trim(),
+        contact: currentProveedor.contact.trim(),
+      }
+
       if (isCreateOpen) {
-        await suppliersService.create({
-          name: currentProveedor.name,
-          contact: currentProveedor.contact,
-        })
+        await suppliersService.create(supplierData)
         toast({
           title: "Éxito",
           description: "Proveedor creado correctamente",
         })
         setIsCreateOpen(false)
       } else if (isEditOpen) {
-        await suppliersService.update(currentProveedor.id, {
-          name: currentProveedor.name,
-          contact: currentProveedor.contact,
-        })
+        await suppliersService.update(currentProveedor.id, supplierData)
         toast({
           title: "Éxito",
           description: "Proveedor actualizado correctamente",
@@ -115,7 +123,7 @@ export default function ProveedoresPage() {
       console.error("Error saving supplier:", error)
       toast({
         title: "Error",
-        description: "No se pudo guardar el proveedor",
+        description: error instanceof Error ? error.message : "No se pudo guardar el proveedor",
         variant: "destructive",
       })
     } finally {
@@ -132,13 +140,12 @@ export default function ProveedoresPage() {
         description: "Proveedor eliminado correctamente",
       })
       setIsDeleteOpen(false)
-      // Recargar la lista
       await loadProveedores()
     } catch (error) {
       console.error("Error deleting supplier:", error)
       toast({
         title: "Error",
-        description: "No se pudo eliminar el proveedor",
+        description: error instanceof Error ? error.message : "No se pudo eliminar el proveedor",
         variant: "destructive",
       })
     } finally {
@@ -150,7 +157,6 @@ export default function ProveedoresPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Cargando proveedores...</span>
       </div>
     )
   }
@@ -196,28 +202,37 @@ export default function ProveedoresPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProveedores.map((proveedor) => (
-                <TableRow key={proveedor.id}>
-                  <TableCell>{proveedor.id}</TableCell>
-                  <TableCell className="font-medium">{proveedor.name}</TableCell>
-                  <TableCell>{proveedor.contact}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(proveedor)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(proveedor)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {filteredProveedores.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-slate-500">
+                    No hay proveedores disponibles
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredProveedores.map((proveedor) => (
+                  <TableRow key={proveedor.id}>
+                    <TableCell>{proveedor.id}</TableCell>
+                    <TableCell className="font-medium">{proveedor.name}</TableCell>
+                    <TableCell>{proveedor.contact}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(proveedor)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(proveedor)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
+      {/* Modal de Crear Proveedor */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
@@ -231,6 +246,8 @@ export default function ProveedoresPage() {
                 id="nombre"
                 value={currentProveedor.name}
                 onChange={(e) => setCurrentProveedor({ ...currentProveedor, name: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el nombre del proveedor"
               />
             </div>
             <div className="grid gap-2">
@@ -239,6 +256,8 @@ export default function ProveedoresPage() {
                 id="contacto"
                 value={currentProveedor.contact}
                 onChange={(e) => setCurrentProveedor({ ...currentProveedor, contact: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el contacto del proveedor"
               />
             </div>
           </div>
@@ -257,6 +276,7 @@ export default function ProveedoresPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Editar Proveedor */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -270,6 +290,8 @@ export default function ProveedoresPage() {
                 id="nombre"
                 value={currentProveedor.name}
                 onChange={(e) => setCurrentProveedor({ ...currentProveedor, name: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el nombre del proveedor"
               />
             </div>
             <div className="grid gap-2">
@@ -278,6 +300,8 @@ export default function ProveedoresPage() {
                 id="contacto"
                 value={currentProveedor.contact}
                 onChange={(e) => setCurrentProveedor({ ...currentProveedor, contact: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el contacto del proveedor"
               />
             </div>
           </div>
@@ -296,6 +320,7 @@ export default function ProveedoresPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Eliminar Proveedor */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -307,6 +332,7 @@ export default function ProveedoresPage() {
           <div className="py-4">
             <p className="font-medium">{currentProveedor.name}</p>
             <p className="text-slate-500">ID: {currentProveedor.id}</p>
+            <p className="text-slate-500">Contacto: {currentProveedor.contact}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={saving}>

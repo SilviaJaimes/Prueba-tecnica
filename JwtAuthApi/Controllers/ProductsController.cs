@@ -31,9 +31,21 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Product product)
+    public async Task<IActionResult> Update(int id, [FromBody] Product body)
     {
-        if (id != product.Id) return BadRequest();
+        if (string.IsNullOrWhiteSpace(body.Name))
+            return BadRequest("El campo 'name' es obligatorio.");
+
+        var product = new Product
+        {
+            Id = id,
+            Name = body.Name,
+            Description = body.Description,
+            Price = body.Price,
+            CategoryId = body.CategoryId,
+            SupplierId = body.SupplierId
+        };
+
         var updated = await _repo.UpdateAsync(product);
         return updated ? NoContent() : NotFound();
     }

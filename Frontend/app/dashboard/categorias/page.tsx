@@ -17,19 +17,19 @@ import { Pencil, Plus, Search, Trash2, Loader2 } from "lucide-react"
 import { categoriesService } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-interface Categoria {
+interface Category {
   id: number
   name: string
 }
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [categorias, setCategorias] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [currentCategoria, setCurrentCategoria] = useState<Categoria>({
+  const [currentCategoria, setCurrentCategoria] = useState<Category>({
     id: 0,
     name: "",
   })
@@ -69,29 +69,38 @@ export default function CategoriasPage() {
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (categoria: Categoria) => {
-    setCurrentCategoria(categoria)
+  const handleEdit = (categoria: Category) => {
+    setCurrentCategoria({ ...categoria })
     setIsEditOpen(true)
   }
 
-  const handleDelete = (categoria: Categoria) => {
+  const handleDelete = (categoria: Category) => {
     setCurrentCategoria(categoria)
     setIsDeleteOpen(true)
   }
 
   const saveCategoria = async () => {
+    if (!currentCategoria.name.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre de la categoría es requerido",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       setSaving(true)
 
       if (isCreateOpen) {
-        await categoriesService.create({ name: currentCategoria.name })
+        await categoriesService.create({ name: currentCategoria.name.trim() })
         toast({
           title: "Éxito",
           description: "Categoría creada correctamente",
         })
         setIsCreateOpen(false)
       } else if (isEditOpen) {
-        await categoriesService.update(currentCategoria.id, { name: currentCategoria.name })
+        await categoriesService.update(currentCategoria.id, { name: currentCategoria.name.trim() })
         toast({
           title: "Éxito",
           description: "Categoría actualizada correctamente",
@@ -104,7 +113,7 @@ export default function CategoriasPage() {
       console.error("Error saving category:", error)
       toast({
         title: "Error",
-        description: "No se pudo guardar la categoría",
+        description: error instanceof Error ? error.message : "No se pudo guardar la categoría",
         variant: "destructive",
       })
     } finally {
@@ -126,7 +135,7 @@ export default function CategoriasPage() {
       console.error("Error deleting category:", error)
       toast({
         title: "Error",
-        description: "No se pudo eliminar la categoría",
+        description: error instanceof Error ? error.message : "No se pudo eliminar la categoría",
         variant: "destructive",
       })
     } finally {
@@ -138,7 +147,6 @@ export default function CategoriasPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Cargando categorías...</span>
       </div>
     )
   }
@@ -183,22 +191,30 @@ export default function CategoriasPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategorias.map((categoria) => (
-                <TableRow key={categoria.id}>
-                  <TableCell>{categoria.id}</TableCell>
-                  <TableCell className="font-medium">{categoria.name}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(categoria)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(categoria)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {filteredCategorias.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-slate-500">
+                    No hay categorías disponibles
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredCategorias.map((categoria) => (
+                  <TableRow key={categoria.id}>
+                    <TableCell>{categoria.id}</TableCell>
+                    <TableCell className="font-medium">{categoria.name}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(categoria)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(categoria)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -217,6 +233,8 @@ export default function CategoriasPage() {
                 id="nombre"
                 value={currentCategoria.name}
                 onChange={(e) => setCurrentCategoria({ ...currentCategoria, name: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el nombre de la categoría"
               />
             </div>
           </div>
@@ -245,6 +263,8 @@ export default function CategoriasPage() {
                 id="nombre"
                 value={currentCategoria.name}
                 onChange={(e) => setCurrentCategoria({ ...currentCategoria, name: e.target.value })}
+                disabled={saving}
+                placeholder="Ingresa el nombre de la categoría"
               />
             </div>
           </div>
@@ -260,7 +280,6 @@ export default function CategoriasPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Eliminar Categoría */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>

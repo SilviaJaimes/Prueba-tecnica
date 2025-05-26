@@ -14,211 +14,255 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Pencil, Plus, Search, Trash2, Loader2 } from "lucide-react"
+import { ordersService, productsService } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
-const initialOrdenes = [
-  {
-    id: 1,
-    fecha: "2024-05-20",
-    cliente: "Empresa ABC",
-    tipo: "Venta",
-    estado: "Completada",
-    total: 1499.97,
-    productos: [
-      { id: 1, nombre: "Laptop HP Pavilion", precio: 899.99, cantidad: 1, subtotal: 899.99 },
-      { id: 3, nombre: "Teclado Mecánico Logitech", precio: 129.99, cantidad: 2, subtotal: 259.98 },
-      { id: 4, nombre: "Mouse Inalámbrico", precio: 49.99, cantidad: 2, subtotal: 99.98 },
-      { id: 5, nombre: "Disco Duro Externo 1TB", precio: 89.99, cantidad: 2, subtotal: 179.98 },
-    ],
-  },
-  {
-    id: 2,
-    fecha: "2024-05-18",
-    cliente: "Corporación XYZ",
-    tipo: "Venta",
-    estado: "Pendiente",
-    total: 1199.95,
-    productos: [
-      { id: 2, nombre: 'Monitor Dell 27"', precio: 299.99, cantidad: 3, subtotal: 899.97 },
-      { id: 4, nombre: "Mouse Inalámbrico", precio: 49.99, cantidad: 6, subtotal: 299.94 },
-    ],
-  },
-  {
-    id: 3,
-    fecha: "2024-05-15",
-    cliente: "Distribuidora 123",
-    tipo: "Compra",
-    estado: "Completada",
-    total: 4499.5,
-    productos: [{ id: 1, nombre: "Laptop HP Pavilion", precio: 899.99, cantidad: 5, subtotal: 4499.95 }],
-  },
-]
+interface Order {
+  id: number
+  productId: number
+  quantity: number
+  totalPrice: number
+  product?: {
+    id: number
+    name: string
+    description: string
+    price: number
+    categoryId?: number
+    supplierId?: number
+  }
+}
 
-const productos = [
-  { id: 1, nombre: "Laptop HP Pavilion", precio: 899.99 },
-  { id: 2, nombre: 'Monitor Dell 27"', precio: 299.99 },
-  { id: 3, nombre: "Teclado Mecánico Logitech", precio: 129.99 },
-  { id: 4, nombre: "Mouse Inalámbrico", precio: 49.99 },
-  { id: 5, nombre: "Disco Duro Externo 1TB", precio: 89.99 },
-]
+interface Product {
+  id: number
+  name: string
+  description: string
+  price: number
+  categoryId?: number
+  supplierId?: number
+}
 
 export default function OrdenesPage() {
-  const [ordenes, setOrdenes] = useState(initialOrdenes)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
-  const [currentOrden, setCurrentOrden] = useState({
+  const [currentOrder, setCurrentOrder] = useState<Order>({
     id: 0,
-    fecha: "",
-    cliente: "",
-    tipo: "Venta",
-    estado: "Pendiente",
-    total: 0,
-    productos: [],
+    productId: 0,
+    quantity: 1,
+    totalPrice: 0,
   })
-  const [selectedProducto, setSelectedProducto] = useState("")
-  const [cantidad, setCantidad] = useState(1)
-  const [productoActual, setProductoActual] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const { toast } = useToast()
 
-  const filteredOrdenes = ordenes.filter(
-    (orden) =>
-      orden.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orden.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orden.estado.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredOrders = orders.filter((order) => {
+    if (!order) return false
+    const productName = order.product?.name || ""
+    const orderId = order.id?.toString() || ""
+    return productName.toLowerCase().includes(searchTerm.toLowerCase()) || orderId.includes(searchTerm)
+  })
 
   useEffect(() => {
-    if (selectedProducto) {
-      const producto = productos.find((p) => p.id === Number.parseInt(selectedProducto))
-      setProductoActual(producto)
-    } else {
-      setProductoActual(null)
+    loadData()
+  }, [])
+
+  useEffect(() => {
+    if (currentOrder.productId && currentOrder.quantity > 0) {
+      const selectedProduct = products.find((p) => p.id === currentOrder.productId)
+      if (selectedProduct) {
+        const totalPrice = selectedProduct.price * currentOrder.quantity
+        setCurrentOrder((prev) => ({ ...prev, totalPrice }))
+      }
     }
-  }, [selectedProducto])
+  }, [currentOrder.productId, currentOrder.quantity, products])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      console.log("🔄 Cargando órdenes y productos...")
+
+      const productsData = await productsService.getAll()
+      console.log("📦 Productos cargados:", productsData)
+
+      const productsArray = Array.isArray(productsData) ? productsData : []
+      setProducts(productsArray)
+
+      const ordersData = await ordersService.getAll()
+      console.log("📋 Órdenes cargadas (raw):", ordersData)
+
+      const ordersArray = Array.isArray(ordersData) ? ordersData : []
+
+      const ordersWithProducts = ordersArray.map((order) => {
+        if (!order.product && order.productId) {
+          const product = productsArray.find((p) => p.id === order.productId)
+          return {
+            ...order,
+            product: product || null,
+          }
+        }
+        return order
+      })
+
+      console.log("📋 Órdenes procesadas:", ordersWithProducts)
+      setOrders(ordersWithProducts)
+
+      if (ordersWithProducts.length === 0) {
+        console.log("⚠️ No se encontraron órdenes")
+      } else {
+        console.log(`✅ ${ordersWithProducts.length} órdenes cargadas correctamente`)
+      }
+    } catch (error) {
+      console.error("❌ Error loading data:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos",
+        variant: "destructive",
+      })
+      setOrders([])
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleCreate = () => {
-    setCurrentOrden({
-      id: ordenes.length + 1,
-      fecha: new Date().toISOString().split("T")[0],
-      cliente: "",
-      tipo: "Venta",
-      estado: "Pendiente",
-      total: 0,
-      productos: [],
+    setCurrentOrder({
+      id: 0,
+      productId: 0,
+      quantity: 1,
+      totalPrice: 0,
     })
-    setSelectedProducto("")
-    setCantidad(1)
-    setProductoActual(null)
     setIsCreateOpen(true)
   }
 
-  const handleEdit = (orden) => {
-    setCurrentOrden({ ...orden })
-    setSelectedProducto("")
-    setCantidad(1)
-    setProductoActual(null)
+  const handleEdit = (order: Order) => {
+    console.log("✏️ Editando orden:", order)
+    setCurrentOrder({
+      id: order.id,
+      productId: order.productId,
+      quantity: order.quantity,
+      totalPrice: order.totalPrice,
+      product: order.product,
+    })
     setIsEditOpen(true)
   }
 
-  const handleDelete = (orden) => {
-    setCurrentOrden(orden)
+  const handleDelete = (order: Order) => {
+    setCurrentOrder(order)
     setIsDeleteOpen(true)
   }
 
-  const handleView = (orden) => {
-    setCurrentOrden(orden)
+  const handleView = (order: Order) => {
+    setCurrentOrder(order)
     setIsViewOpen(true)
   }
 
-  const addProductToOrden = () => {
-    if (selectedProducto && cantidad > 0 && productoActual) {
-      const subtotal = productoActual.precio * cantidad
-      const existingProductIndex = currentOrden.productos.findIndex((p) => p.id === Number.parseInt(selectedProducto))
+  const saveOrder = async () => {
+    if (!currentOrder.productId || currentOrder.quantity <= 0) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un producto y la cantidad debe ser mayor a 0",
+        variant: "destructive",
+      })
+      return
+    }
 
-      const updatedProductos = [...currentOrden.productos]
+    try {
+      setSaving(true)
 
-      if (existingProductIndex >= 0) {
-        updatedProductos[existingProductIndex] = {
-          ...updatedProductos[existingProductIndex],
-          cantidad: updatedProductos[existingProductIndex].cantidad + cantidad,
-          subtotal: updatedProductos[existingProductIndex].subtotal + subtotal,
-        }
-      } else {
-        updatedProductos.push({
-          id: Number.parseInt(selectedProducto),
-          nombre: productoActual.nombre,
-          precio: productoActual.precio,
-          cantidad: cantidad,
-          subtotal: subtotal,
+      const selectedProduct = products.find((p) => p.id === currentOrder.productId)
+      if (!selectedProduct) {
+        toast({
+          title: "Error",
+          description: "Producto no encontrado",
+          variant: "destructive",
         })
+        return
       }
 
-      const total = updatedProductos.reduce((sum, p) => sum + p.subtotal, 0)
+      const orderData = {
+        productId: currentOrder.productId,
+        quantity: currentOrder.quantity,
+        totalPrice: selectedProduct.price * currentOrder.quantity,
+      }
 
-      setCurrentOrden({
-        ...currentOrden,
-        productos: updatedProductos,
-        total: total,
+      console.log("💾 Guardando orden con datos:", orderData)
+
+      if (isCreateOpen) {
+        const result = await ordersService.create(orderData)
+        console.log("✅ Orden creada:", result)
+        toast({
+          title: "Éxito",
+          description: "Orden creada correctamente",
+        })
+        setIsCreateOpen(false)
+      } else if (isEditOpen) {
+        const result = await ordersService.update(currentOrder.id, orderData)
+        console.log("✅ Orden actualizada:", result)
+        toast({
+          title: "Éxito",
+          description: "Orden actualizada correctamente",
+        })
+        setIsEditOpen(false)
+      }
+
+      await loadData()
+    } catch (error) {
+      console.error("❌ Error saving order:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo guardar la orden",
+        variant: "destructive",
       })
-
-      // Limpiar selección
-      setSelectedProducto("")
-      setCantidad(1)
-      setProductoActual(null)
+    } finally {
+      setSaving(false)
     }
   }
 
-  const removeProductFromOrden = (productId) => {
-    const updatedProductos = currentOrden.productos.filter((p) => p.id !== productId)
-    const total = updatedProductos.reduce((sum, p) => sum + p.subtotal, 0)
-
-    setCurrentOrden({
-      ...currentOrden,
-      productos: updatedProductos,
-      total: total,
-    })
-  }
-
-  const saveOrden = () => {
-    if (isCreateOpen) {
-      setOrdenes([...ordenes, currentOrden])
-      setIsCreateOpen(false)
-    } else if (isEditOpen) {
-      setOrdenes(ordenes.map((o) => (o.id === currentOrden.id ? currentOrden : o)))
-      setIsEditOpen(false)
+  const confirmDelete = async () => {
+    try {
+      setSaving(true)
+      await ordersService.delete(currentOrder.id)
+      toast({
+        title: "Éxito",
+        description: "Orden eliminada correctamente",
+      })
+      setIsDeleteOpen(false)
+      await loadData()
+    } catch (error) {
+      console.error("❌ Error deleting order:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo eliminar la orden",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const confirmDelete = () => {
-    setOrdenes(ordenes.filter((o) => o.id !== currentOrden.id))
-    setIsDeleteOpen(false)
+  const getSelectedProduct = () => {
+    return products.find((p) => p.id === currentOrder.productId)
   }
 
-  const getEstadoBadgeColor = (estado) => {
-    switch (estado) {
-      case "Completada":
-        return "bg-green-100 text-green-800"
-      case "Pendiente":
-        return "bg-yellow-100 text-yellow-800"
-      case "Cancelada":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-slate-100 text-slate-800"
-    }
-  }
+  console.log("🔍 Estado actual:")
+  console.log("- Loading:", loading)
+  console.log("- Orders:", orders)
+  console.log("- Products:", products)
+  console.log("- Filtered orders:", filteredOrders)
 
-  const getTipoBadgeColor = (tipo) => {
-    switch (tipo) {
-      case "Venta":
-        return "bg-blue-100 text-blue-800"
-      case "Compra":
-        return "bg-purple-100 text-purple-800"
-      default:
-        return "bg-slate-100 text-slate-800"
-    }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Cargando órdenes...</span>
+      </div>
+    )
   }
 
   return (
@@ -249,110 +293,97 @@ export default function OrdenesPage() {
               />
             </div>
           </div>
-          <CardDescription>Total: {filteredOrdenes.length} órdenes</CardDescription>
+          <CardDescription>Total: {filteredOrders.length} órdenes</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>Producto</TableHead>
+                <TableHead>Precio Unitario</TableHead>
+                <TableHead>Cantidad</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrdenes.map((orden) => (
-                <TableRow key={orden.id}>
-                  <TableCell>{orden.id}</TableCell>
-                  <TableCell>{orden.fecha}</TableCell>
-                  <TableCell className="font-medium">{orden.cliente}</TableCell>
-                  <TableCell>
-                    <Badge className={getTipoBadgeColor(orden.tipo)}>{orden.tipo}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getEstadoBadgeColor(orden.estado)}>{orden.estado}</Badge>
-                  </TableCell>
-                  <TableCell>${orden.total.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleView(orden)}>
-                        <Search className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(orden)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(orden)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {filteredOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                    {orders.length === 0 ? (
+                      <div>
+                        <p>No hay órdenes disponibles</p>
+                        <p className="text-xs mt-1">Crea tu primera orden usando el botón "Nueva Orden"</p>
+                      </div>
+                    ) : (
+                      "No se encontraron órdenes que coincidan con la búsqueda"
+                    )}
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>{order.id}</TableCell>
+                    <TableCell className="font-medium">
+                      {order.product?.name || `Producto ID: ${order.productId}`}
+                    </TableCell>
+                    <TableCell>${order.product?.price?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell>{order.quantity}</TableCell>
+                    <TableCell className="font-bold">${order.totalPrice?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleView(order)}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(order)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(order)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Detalles de la Orden</DialogTitle>
             <DialogDescription>Información detallada de la orden seleccionada.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
+          <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-slate-500">ID de Orden</p>
-                <p>{currentOrden.id}</p>
+                <p className="font-medium">{currentOrder.id}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Fecha</p>
-                <p>{currentOrden.fecha}</p>
+                <p className="text-sm font-medium text-slate-500">Producto</p>
+                <p className="font-medium">{currentOrder.product?.name || "N/A"}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Cliente</p>
-                <p>{currentOrden.cliente}</p>
+                <p className="text-sm font-medium text-slate-500">Descripción</p>
+                <p>{currentOrder.product?.description || "N/A"}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Tipo</p>
-                <Badge className={getTipoBadgeColor(currentOrden.tipo)}>{currentOrden.tipo}</Badge>
+                <p className="text-sm font-medium text-slate-500">Precio Unitario</p>
+                <p>${currentOrder.product?.price?.toFixed(2) || "0.00"}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-500">Estado</p>
-                <Badge className={getEstadoBadgeColor(currentOrden.estado)}>{currentOrden.estado}</Badge>
+                <p className="text-sm font-medium text-slate-500">Cantidad</p>
+                <p className="font-medium">{currentOrder.quantity}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-500">Total</p>
-                <p className="font-bold">${currentOrden.total?.toFixed(2)}</p>
+                <p className="text-xl font-bold text-green-600">${currentOrder.totalPrice.toFixed(2)}</p>
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium mb-2">Productos</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Subtotal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentOrden.productos?.map((producto) => (
-                    <TableRow key={producto.id}>
-                      <TableCell>{producto.nombre}</TableCell>
-                      <TableCell>${producto.precio.toFixed(2)}</TableCell>
-                      <TableCell>{producto.cantidad}</TableCell>
-                      <TableCell>${producto.subtotal.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
             </div>
           </div>
           <DialogFooter>
@@ -362,170 +393,69 @@ export default function OrdenesPage() {
       </Dialog>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Crear Nueva Orden</DialogTitle>
             <DialogDescription>Completa los campos para agregar una nueva orden.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="cliente">Cliente</label>
-                <Input
-                  id="cliente"
-                  value={currentOrden.cliente}
-                  onChange={(e) => setCurrentOrden({ ...currentOrden, cliente: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="fecha">Fecha</label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={currentOrden.fecha}
-                  onChange={(e) => setCurrentOrden({ ...currentOrden, fecha: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="tipo">Tipo</label>
-                <Select
-                  value={currentOrden.tipo}
-                  onValueChange={(value) => setCurrentOrden({ ...currentOrden, tipo: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Venta">Venta</SelectItem>
-                    <SelectItem value="Compra">Compra</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="estado">Estado</label>
-                <Select
-                  value={currentOrden.estado}
-                  onValueChange={(value) => setCurrentOrden({ ...currentOrden, estado: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pendiente">Pendiente</SelectItem>
-                    <SelectItem value="Completada">Completada</SelectItem>
-                    <SelectItem value="Cancelada">Cancelada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="producto">Producto</label>
+              <Select
+                value={currentOrder.productId > 0 ? currentOrder.productId.toString() : ""}
+                onValueChange={(value) => setCurrentOrder({ ...currentOrder, productId: Number.parseInt(value) })}
+                disabled={saving}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} - ${product.price.toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="border rounded-md p-4">
-              <h3 className="text-lg font-medium mb-4">Agregar Productos</h3>
-              <div className="grid grid-cols-12 gap-4 mb-4">
-                <div className="col-span-5">
-                  <label htmlFor="producto" className="block mb-2 text-sm">
-                    Producto
-                  </label>
-                  <Select value={selectedProducto} onValueChange={setSelectedProducto}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un producto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productos.map((producto) => (
-                        <SelectItem key={producto.id} value={producto.id.toString()}>
-                          {producto.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="precio" className="block mb-2 text-sm">
-                    Precio
-                  </label>
-                  <Input id="precio" value={productoActual ? `$${productoActual.precio.toFixed(2)}` : ""} disabled />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="cantidad" className="block mb-2 text-sm">
-                    Cantidad
-                  </label>
-                  <Input
-                    id="cantidad"
-                    type="number"
-                    min="1"
-                    value={cantidad}
-                    onChange={(e) => setCantidad(Number.parseInt(e.target.value) || 1)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="subtotal" className="block mb-2 text-sm">
-                    Subtotal
-                  </label>
-                  <Input
-                    id="subtotal"
-                    value={productoActual ? `$${(productoActual.precio * cantidad).toFixed(2)}` : ""}
-                    disabled
-                  />
-                </div>
-                <div className="col-span-1 flex items-end">
-                  <Button onClick={addProductToOrden} disabled={!selectedProducto || cantidad < 1} className="w-full">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+            {getSelectedProduct() && (
+              <div className="bg-slate-50 p-3 rounded-md">
+                <p className="text-sm font-medium">Producto seleccionado:</p>
+                <p className="font-medium">{getSelectedProduct()?.name}</p>
+                <p className="text-sm text-slate-600">{getSelectedProduct()?.description}</p>
+                <p className="text-lg font-bold text-green-600">Precio: ${getSelectedProduct()?.price.toFixed(2)}</p>
               </div>
+            )}
 
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>Subtotal</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentOrden.productos.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-slate-500">
-                          No hay productos agregados
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      currentOrden.productos.map((producto) => (
-                        <TableRow key={producto.id}>
-                          <TableCell>{producto.nombre}</TableCell>
-                          <TableCell>${producto.precio.toFixed(2)}</TableCell>
-                          <TableCell>{producto.cantidad}</TableCell>
-                          <TableCell>${producto.subtotal.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => removeProductFromOrden(producto.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="cantidad">Cantidad</label>
+              <Input
+                id="cantidad"
+                type="number"
+                min="1"
+                value={currentOrder.quantity}
+                onChange={(e) => setCurrentOrder({ ...currentOrder, quantity: Number.parseInt(e.target.value) || 1 })}
+                disabled={saving}
+              />
+            </div>
 
-              <div className="flex justify-end mt-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-500">Total</p>
-                  <p className="text-xl font-bold">${currentOrden.total.toFixed(2)}</p>
-                </div>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="total">Total</label>
+              <Input
+                id="total"
+                value={`$${currentOrder.totalPrice.toFixed(2)}`}
+                disabled
+                className="font-bold text-lg"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={saveOrden} disabled={!currentOrden.cliente || currentOrden.productos.length === 0}>
+            <Button onClick={saveOrder} disabled={saving || !currentOrder.productId}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Guardar
             </Button>
           </DialogFooter>
@@ -533,177 +463,75 @@ export default function OrdenesPage() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Orden</DialogTitle>
             <DialogDescription>Modifica los campos para actualizar la información de la orden.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="cliente">Cliente</label>
-                <Input
-                  id="cliente"
-                  value={currentOrden.cliente}
-                  onChange={(e) => setCurrentOrden({ ...currentOrden, cliente: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="fecha">Fecha</label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={currentOrden.fecha}
-                  onChange={(e) => setCurrentOrden({ ...currentOrden, fecha: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <label htmlFor="tipo">Tipo</label>
-                <Select
-                  value={currentOrden.tipo}
-                  onValueChange={(value) => setCurrentOrden({ ...currentOrden, tipo: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Venta">Venta</SelectItem>
-                    <SelectItem value="Compra">Compra</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <label htmlFor="estado">Estado</label>
-                <Select
-                  value={currentOrden.estado}
-                  onValueChange={(value) => setCurrentOrden({ ...currentOrden, estado: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pendiente">Pendiente</SelectItem>
-                    <SelectItem value="Completada">Completada</SelectItem>
-                    <SelectItem value="Cancelada">Cancelada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="producto">Producto</label>
+              <Select
+                value={currentOrder.productId > 0 ? currentOrder.productId.toString() : ""}
+                onValueChange={(value) => setCurrentOrder({ ...currentOrder, productId: Number.parseInt(value) })}
+                disabled={saving}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un producto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} - ${product.price.toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="border rounded-md p-4">
-              <h3 className="text-lg font-medium mb-4">Agregar Productos</h3>
-              <div className="grid grid-cols-12 gap-4 mb-4">
-                <div className="col-span-5">
-                  <label htmlFor="producto" className="block mb-2 text-sm">
-                    Producto
-                  </label>
-                  <Select value={selectedProducto} onValueChange={setSelectedProducto}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un producto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productos.map((producto) => (
-                        <SelectItem key={producto.id} value={producto.id.toString()}>
-                          {producto.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="precio" className="block mb-2 text-sm">
-                    Precio
-                  </label>
-                  <Input id="precio" value={productoActual ? `$${productoActual.precio.toFixed(2)}` : ""} disabled />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="cantidad" className="block mb-2 text-sm">
-                    Cantidad
-                  </label>
-                  <Input
-                    id="cantidad"
-                    type="number"
-                    min="1"
-                    value={cantidad}
-                    onChange={(e) => setCantidad(Number.parseInt(e.target.value) || 1)}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="subtotal" className="block mb-2 text-sm">
-                    Subtotal
-                  </label>
-                  <Input
-                    id="subtotal"
-                    value={productoActual ? `$${(productoActual.precio * cantidad).toFixed(2)}` : ""}
-                    disabled
-                  />
-                </div>
-                <div className="col-span-1 flex items-end">
-                  <Button onClick={addProductToOrden} disabled={!selectedProducto || cantidad < 1} className="w-full">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+            {getSelectedProduct() && (
+              <div className="bg-slate-50 p-3 rounded-md">
+                <p className="text-sm font-medium">Producto seleccionado:</p>
+                <p className="font-medium">{getSelectedProduct()?.name}</p>
+                <p className="text-sm text-slate-600">{getSelectedProduct()?.description}</p>
+                <p className="text-lg font-bold text-green-600">Precio: ${getSelectedProduct()?.price.toFixed(2)}</p>
               </div>
+            )}
 
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Precio</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>Subtotal</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentOrden.productos.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-slate-500">
-                          No hay productos agregados
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      currentOrden.productos.map((producto) => (
-                        <TableRow key={producto.id}>
-                          <TableCell>{producto.nombre}</TableCell>
-                          <TableCell>${producto.precio.toFixed(2)}</TableCell>
-                          <TableCell>{producto.cantidad}</TableCell>
-                          <TableCell>${producto.subtotal.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => removeProductFromOrden(producto.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="cantidad">Cantidad</label>
+              <Input
+                id="cantidad"
+                type="number"
+                min="1"
+                value={currentOrder.quantity}
+                onChange={(e) => setCurrentOrder({ ...currentOrder, quantity: Number.parseInt(e.target.value) || 1 })}
+                disabled={saving}
+              />
+            </div>
 
-              <div className="flex justify-end mt-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-500">Total</p>
-                  <p className="text-xl font-bold">${currentOrden.total.toFixed(2)}</p>
-                </div>
-              </div>
+            <div className="grid gap-2">
+              <label htmlFor="total">Total</label>
+              <Input
+                id="total"
+                value={`$${currentOrder.totalPrice.toFixed(2)}`}
+                disabled
+                className="font-bold text-lg"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={saveOrden} disabled={!currentOrden.cliente || currentOrden.productos.length === 0}>
+            <Button onClick={saveOrder} disabled={saving || !currentOrder.productId}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Guardar Cambios
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Eliminar Orden */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -713,15 +541,16 @@ export default function OrdenesPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="font-medium">Orden #{currentOrden.id}</p>
-            <p className="text-slate-500">Cliente: {currentOrden.cliente}</p>
-            <p className="text-slate-500">Total: ${currentOrden.total?.toFixed(2)}</p>
+            <p className="font-medium">Orden #{currentOrder.id}</p>
+            <p className="text-slate-500">Producto: {currentOrder.product?.name || "N/A"}</p>
+            <p className="text-slate-500">Total: ${currentOrder.totalPrice?.toFixed(2) || "0.00"}</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button variant="destructive" onClick={confirmDelete} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Eliminar
             </Button>
           </DialogFooter>

@@ -31,10 +31,20 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Order model)
+    public async Task<IActionResult> Update(int id, [FromBody] Order body)
     {
-        if (id != model.Id) return BadRequest();
-        var updated = await _repo.UpdateAsync(model);
+        if (body.ProductId <= 0 || body.Quantity <= 0 || body.TotalPrice <= 0)
+            return BadRequest("Todos los campos deben ser válidos.");
+
+        var order = new Order
+        {
+            Id = id,
+            ProductId = body.ProductId,
+            Quantity = body.Quantity,
+            TotalPrice = body.TotalPrice
+        };
+
+        var updated = await _repo.UpdateAsync(order);
         return updated ? NoContent() : NotFound();
     }
 

@@ -8,7 +8,7 @@ const getToken = () => {
   return null
 }
 
-// Función para hacer peticiones HTTP con autenticación
+// Función para hacer peticiones con autenticación
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = getToken()
 
@@ -23,12 +23,35 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
 
-  if (!response.ok) {
-    if (response.status === 401) {
+  // Si el token ha expirado, redirigir al login
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
       localStorage.removeItem("token")
       window.location.href = "/login"
     }
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw new Error("Token expirado")
+  }
+
+  // Para DELETE, si es 200 o 204, considerarlo exitoso
+  if (options.method === "DELETE" && (response.status === 200 || response.status === 204)) {
+    return { success: true }
+  }
+
+  if (!response.ok) {
+    let errorData
+    try {
+      errorData = await response.json()
+    } catch {
+      errorData = { message: `Error ${response.status}` }
+    }
+    console.error("API Error:", errorData)
+    throw new Error(errorData.message || errorData.title || `Error ${response.status}`)
+  }
+
+  // Para respuestas vacías (como DELETE exitoso), retornar objeto de éxito
+  const contentType = response.headers.get("content-type")
+  if (!contentType || !contentType.includes("application/json")) {
+    return { success: true }
   }
 
   return response.json()
@@ -46,7 +69,8 @@ export const authService = {
     })
 
     if (!response.ok) {
-      throw new Error("Error al iniciar sesión")
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || "Error al iniciar sesión")
     }
 
     return response.json()

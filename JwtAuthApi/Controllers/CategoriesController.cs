@@ -31,10 +31,13 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Category model)
+    public async Task<IActionResult> Update(int id, [FromBody] Dictionary<string, string> body)
     {
-        if (id != model.Id) return BadRequest();
-        var updated = await _repo.UpdateAsync(model);
+        if (!body.TryGetValue("name", out var name) || string.IsNullOrWhiteSpace(name))
+            return BadRequest("El campo 'name' es obligatorio.");
+
+        var category = new Category { Id = id, Name = name };
+        var updated = await _repo.UpdateAsync(category);
         return updated ? NoContent() : NotFound();
     }
 
